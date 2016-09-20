@@ -141,7 +141,8 @@
 // found in mixed_types.i
 %typemap(in) SWIGTYPE *const&($*ltype temp)
 %{temp=($*ltype)SWIG_MustGetPtr(ctx,$input,$*descriptor,0,$argnum,"$symname");
-$1=($1_ltype)&temp;%}
+  if (temp == NULL) goto fail;
+  $1=($1_ltype)&temp;%}
 
 %typemap(out) SWIGTYPE *const&
 %{SWIG_NewPointerObj(ctx,*$1,$*descriptor,$owner);  %}

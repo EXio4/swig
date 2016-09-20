@@ -157,6 +157,16 @@ For a more useful solution: see std_except for more details
   goto fail;
 %}
 
+/* 
+%typemap(throws) "..."
+%{
+  (void)$1; // ignore it
+  duk_push_sprintf(ctx,"AnyException");
+  ret = 1;
+  goto fail; 
+%}
+*/
+
 // note: no support for object pointers
 // its not clear how long the pointer is valid for, therefore not supporting it
 // TODO: Duktape 2.x may support pinning.

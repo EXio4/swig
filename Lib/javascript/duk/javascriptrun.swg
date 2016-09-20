@@ -171,13 +171,14 @@ SWIGRUNTIME duk_function_list_entry _SwigObject_functions[] = {
 #define SWIG_MODULE_CLIENTDATA_TYPE duk_context*
 
 /* Contract support */
-//#define SWIG_contract_assert(expr, msg)  \
-//  if (!(expr)) { duk_push_string(ctx, (char *) msg); duk_throw(ctx); } else
+#define SWIG_contract_assert(expr, msg)  \
+  if (!(expr)) { duk_push_string(ctx, (char *) msg); goto fail; };  
 
 /* helper #defines */
 
 #define SWIG_fail { goto fail; }
 #define SWIG_Error(code,msg) { duk_push_sprintf(ctx, "C[%d] %s", code, msg); }
+#define SWIG_exception SWIG_Error
 #define SWIG_fail_arg(func_name,argnum,type) \
   {duk_push_sprintf(ctx,"Error in %s (arg %d), expected '%s' got '%s'",\
   func_name,argnum,type,SWIG_duk_typename(ctx, argnum));\
@@ -207,8 +208,6 @@ SWIGRUNTIME duk_function_list_entry _SwigObject_functions[] = {
 
 /* special helper for allowing 'undefined' for usertypes */
 #define SWIG_isptrtype(ctx,I) SWIG_duk_isptrtype(ctx, I)
-
-#define SWIG_exception_fail
 
 bool SWIG_duk_isptrtype(duk_context *ctx, duk_idx_t idx) {
     if (duk_is_undefined(ctx, idx)) return true; // NULL pointer
@@ -362,6 +361,13 @@ SWIGINTERN void SWIG_duk_AddPrototype(duk_context *ctx,swig_type_info *type)
   }
 }
 
+void SWIG_duk_add_prototype(duk_context* ctx, duk_idx_t obj_idx, swig_type_info *type) {
+  if (type && type->clientdata) {
+    duk_push_heapptr(ctx, type->clientdata);
+    duk_set_prototype(ctx, obj_idx);
+  }
+}
+
 /* pushes a new userdata buffer into the duk stack */
 SWIGRUNTIME duk_idx_t SWIG_duk_NewPointerObj(duk_context *ctx,void *ptr,swig_type_info *type,bool own)
 {
@@ -380,10 +386,7 @@ SWIGRUNTIME duk_idx_t SWIG_duk_NewPointerObj(duk_context *ctx,void *ptr,swig_typ
   usr->type=type;
   usr->own=own;
   duk_put_prop_string(ctx, obj_idx, "\xFFprivate");
-  if (type && type->clientdata) {
-    duk_push_heapptr(ctx, type->clientdata);
-    duk_set_prototype(ctx, obj_idx);
-  }
+  SWIG_duk_add_prototype(ctx, obj_idx, type);
   //SWIG_duk_AddPrototype(ctx,type); /* add prototype */
   return 1;
 }
@@ -437,6 +440,48 @@ SWIGRUNTIME int SWIG_duk_ConvertPtr(duk_context *ctx,duk_idx_t obj_idx,void **pt
   sadplace:
     return SWIG_ERROR;  /* error */
 }
+
+SWIGRUNTIME void* SWIG_duk_MustGetPtr(duk_context* ctx,int index,swig_type_info *type,int flags,
+       int argnum,const char *func_name){
+  void *result;
+  if (!SWIG_IsOK(SWIG_ConvertPtr(ctx,index,&result,type,flags))){
+    duk_push_sprintf(ctx,"Error in %s, expected a %s at argument number %d\n",
+		             func_name,(type && type->str)?type->str:"void*",argnum);
+    return NULL;
+  }
+  return result;
+}
+
+
+/* pushes a packed userdata. user for member fn pointers only */
+SWIGRUNTIME void SWIG_duk_NewPackedObj(duk_context* ctx,void *ptr,size_t size,swig_type_info *type)
+{
+  swig_duk_rawdata *raw;
+  assert(ptr); /* not acceptable to pass in a NULL value */
+  raw=(swig_duk_rawdata*)duk_push_fixed_buffer(ctx,sizeof(swig_duk_rawdata) - 1 + size);
+  raw->type=type;
+  raw->own=0;
+  memcpy(raw->data,ptr,size); /* copy the data */
+  SWIG_duk_add_prototype(ctx, -1, type);
+}
+    
+/* converts a packed userdata. user for member fn pointers only */
+SWIGRUNTIME int  SWIG_duk_ConvertPacked(duk_context* ctx,duk_idx_t obj_idx,void *ptr,size_t size,swig_type_info *type)
+{
+  swig_duk_rawdata *raw;
+  duk_size_t osize;
+  raw=(swig_duk_rawdata*)duk_to_fixed_buffer(ctx,obj_idx,&osize);  /* get data */
+  if (!raw) return SWIG_ERROR;  /* error */
+  if (type==0 || type==raw->type) /* void* or identical type */
+  {
+    memcpy(ptr,raw->data,size); /* copy it */
+    return SWIG_OK; /* ok */
+  }
+  return SWIG_ERROR;  /* error */
+}
+
+
+
 
 /* -----------------------------------------------------------------------------
  * executing Javascript code from within the wrapper
