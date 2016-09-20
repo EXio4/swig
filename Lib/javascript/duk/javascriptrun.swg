@@ -171,15 +171,17 @@ SWIGRUNTIME duk_function_list_entry _SwigObject_functions[] = {
 #define SWIG_MODULE_CLIENTDATA_TYPE duk_context*
 
 /* Contract support */
-#define SWIG_contract_assert(expr, msg)  \
-  if (!(expr)) { duk_push_string(ctx, (char *) msg); duk_throw(ctx); } else
+//#define SWIG_contract_assert(expr, msg)  \
+//  if (!(expr)) { duk_push_string(ctx, (char *) msg); duk_throw(ctx); } else
 
 /* helper #defines */
-#define SWIG_fail {duk_throw(ctx);}
+
+#define SWIG_fail { goto fail; }
+#define SWIG_Error(code,msg) { duk_push_sprintf(ctx, "C[%d] %s", code, msg); }
 #define SWIG_fail_arg(func_name,argnum,type) \
   {duk_push_sprintf(ctx,"Error in %s (arg %d), expected '%s' got '%s'",\
   func_name,argnum,type,SWIG_duk_typename(ctx, argnum));\
-  duk_throw(ctx);}
+   SWIG_fail; }
 #define SWIG_fail_ptr(func_name,argnum,type) \
   {if (duk_is_object(ctx, argnum)) {\
    duk_get_prop_string(ctx, argnum, "\xFFprivate");\
@@ -207,7 +209,6 @@ SWIGRUNTIME duk_function_list_entry _SwigObject_functions[] = {
 #define SWIG_isptrtype(ctx,I) SWIG_duk_isptrtype(ctx, I)
 
 #define SWIG_exception_fail
-
 
 bool SWIG_duk_isptrtype(duk_context *ctx, duk_idx_t idx) {
     if (duk_is_undefined(ctx, idx)) return true; // NULL pointer

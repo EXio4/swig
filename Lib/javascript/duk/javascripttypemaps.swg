@@ -215,7 +215,11 @@ A function void fn(void*) should take any kind of pointer as a parameter (just l
 but if its an output, then it should be wrapped like any other SWIG object (using default typemap)
 */
 %typemap(in) void*
-%{$1=($1_ltype)SWIG_MustGetPtr(ctx,$input,0,0,$argnum,"$symname");%}
+%{
+
+    if (!SWIG_IsOK(SWIG_ConvertMember(ctx,$input,(void*)(&$1),0,$descriptor)))
+      SWIG_fail_ptr("$symname",$argnum,$descriptor);
+%}
 
 /* long long is another special case:
 as Duktape only supports one numeric type (duk_double_t), we will just cast it

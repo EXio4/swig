@@ -21,104 +21,93 @@
  *   fs = example.FiddleSticks;
  * ----------------------------------------------------------------------------- */
 
-%fragment("SWIG_DUKGetIntProperty",    "header", fragment=SWIG_AsVal_frag(int)) {}
-%fragment("SWIG_DUKGetNumberProperty", "header", fragment=SWIG_AsVal_frag(double)) {}
-
-%typemap(in, fragment="SWIG_DUK_GetIntProperty") int[], int[ANY]
-    (int length = 0, JSObjectRef array, JSValueRef jsvalue, int i = 0, int res = 0, $*1_ltype temp) {
-
-  if (JSValueIsObject(context, $input))
+%typemap(in) int[], int[ANY]
+    ($*1_ltype temp) {
+  if (!duk_is_array(ctx, $input)) {
+	duk_push_string(ctx,"Expected int array in $input argument");
+	goto fail;
+  };
   {
-    // Convert into Array
-    array = JSValueToObject(context, $input, NULL);
-
-    length = $1_dim0;
-
+  /* duk_get_prop_string(ctx, $input, "length");
+  int length = duk_get_int(ctx, -1);
+  duk_pop(ctx);*/
+    int length = $1_dim0;
     $1  = ($*1_ltype *)malloc(sizeof($*1_ltype) * length);
 
     // Get each element from array
     for (i = 0; i < length; i++)
     {
-      jsvalue = JSObjectGetPropertyAtIndex(context, array, i, NULL);
-
-      // Get primitive value from JSObject
-      res = SWIG_AsVal(int)(jsvalue, &temp);
-      if (!SWIG_IsOK(res))
-      {
-        SWIG_exception_fail(SWIG_ERROR, "Failed to convert $input to double");
+      duk_get_prop_index(ctx, $input, i);
+      if (!duk_is_int(ctx, -1)) {
+          duk_push_string(ctx,"Expected int array in $input argument"); goto fail;
       }
-      arg$argnum[i] = temp;
+      arg$argnum[i] = duk_get_int(ctx, -1);
+      duk_pop(ctx);
     }
 
   }
-  else
-  {
-    SWIG_exception_fail(SWIG_ERROR, "$input is not JSObjectRef");
-  }
+
 }
 
 %typemap(freearg) int[], int[ANY] {
     free($1);
 }
 
-%typemap(out, fragment=SWIG_From_frag(int)) int[], int[ANY] (int length = 0, int i = 0)
+%typemap(out) int[], int[ANY] ()
 {
-  length = $1_dim0;
-  JSValueRef values[length];
-
-  for (i = 0; i < length; i++)
   {
-    values[i] = SWIG_From(int)($1[i]);
+    length = $1_dim0;
+    duk_idx_t arr_idx = duk_push_array(ctx);
+    for (int i=0; i<length; i++) {
+	duk_push_int(ctx, $1[i]);
+        duk_push_prop_index(ctx, arr_idx, i);
+    }
   }
-
-  $result = JSObjectMakeArray(context, length, values, NULL);
 }
 
-%typemap(in, fragment="SWIG_DUK_GetNumberProperty") double[], double[ANY]
-    (int length = 0, JSObjectRef array, JSValueRef jsvalue, int i = 0, int res = 0, $*1_ltype temp) {
-  if (JSValueIsObject(context, $input))
+
+%typemap(in) double[], double[ANY]
+    ($*1_ltype temp) {
+  if (!duk_is_array(ctx, $input)) {
+	duk_push_string(ctx,"Expected double array in $input argument");
+	goto fail;
+  };
   {
-    // Convert into Array
-    array = JSValueToObject(context, $input, NULL);
-
-    length = $1_dim0;
-
+  /* duk_get_prop_string(ctx, $input, "length");
+  int length = duk_get_int(ctx, -1);
+  duk_pop(ctx);*/
+    int length = $1_dim0;
     $1  = ($*1_ltype *)malloc(sizeof($*1_ltype) * length);
 
     // Get each element from array
     for (i = 0; i < length; i++)
     {
-      jsvalue = JSObjectGetPropertyAtIndex(context, array, i, NULL);
-
-      // Get primitive value from JSObject
-      res = SWIG_AsVal(double)(jsvalue, &temp);
-      if (!SWIG_IsOK(res))
-      {
-        SWIG_exception_fail(SWIG_ERROR, "Failed to convert $input to double");
+      duk_get_prop_index(ctx, $input, i);
+      if (!duk_is_double(ctx, -1)) {
+          duk_push_string(ctx,"Expected double array in $input argument"); goto fail;
       }
-      arg$argnum[i] = temp;
+      arg$argnum[i] = duk_get_double(ctx, -1);
+      duk_pop(ctx);
     }
 
   }
-  else
-  {
-    SWIG_exception_fail(SWIG_ERROR, "$input is not JSObjectRef");
-  }
+
 }
 
 %typemap(freearg) double[], double[ANY] {
     free($1);
 }
 
-%typemap(out, fragment=SWIG_From_frag(double)) double[], double[ANY] (int length = 0, int i = 0)
+%typemap(out) double[], double[ANY] ()
 {
-  length = $1_dim0;
-  JSValueRef values[length];
-
-  for (i = 0; i < length; i++)
   {
-    values[i] = SWIG_From(double)($1[i]);
+    length = $1_dim0;
+    duk_idx_t arr_idx = duk_push_array(ctx);
+    for (int i=0; i<length; i++) {
+	duk_push_double(ctx, $1[i]);
+        duk_push_prop_index(ctx, arr_idx, i);
+    }
   }
-
-  $result = JSObjectMakeArray(context, length, values, NULL);
 }
+
+
